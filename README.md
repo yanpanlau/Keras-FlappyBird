@@ -1,15 +1,12 @@
 # Keras-FlappyBird
-Using Keras and Deep Q-Network to Play FlappyBird
 
 A single 200 lines of python code to demostrate DQN with Keras
+
+![](animation1.gif)
 
 Please read the following blog for details
 
 https://yanpanlau.github.io/2016/07/10/FlappyBird-Keras.html
-
-# Overview
-
-This project demostrated how to use Deep-Q Learning algorithm with Keras together to play FlappyBird.
 
 # Installation Dependencies:
 

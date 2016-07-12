@@ -22,7 +22,7 @@ https://yanpanlau.github.io/2016/07/10/FlappyBird-Keras.html
 ```
 git clone https://github.com/yanpanlau/Keras-FlappyBird.git
 cd Keras-FlappyBird
-python qlearn.py
+python qlearn.py -m "Run"
 ```
 
 **GPU version (Theano)**
@@ -30,5 +30,7 @@ python qlearn.py
 ```
 git clone https://github.com/yanpanlau/Keras-FlappyBird.git
 cd Keras-FlappyBird
-THEANO_FLAGS=device=gpu,floatX=float32,lib.cnmem=0.2 python qlearn.py
+THEANO_FLAGS=device=gpu,floatX=float32,lib.cnmem=0.2 python qlearn.py -m "Run"
 ```
+
+If you want to train the network from beginning, delete the model.h5 and run qlearn.py -m "Train"

@@ -26,7 +26,7 @@ GAME = 'bird' # the name of the game being played for log files
 CONFIG = 'nothreshold'
 ACTIONS = 2 # number of valid actions
 GAMMA = 0.99 # decay rate of past observations
-OBSERVE = 3200. # timesteps to observe before training
+OBSERVATION = 3200. # timesteps to observe before training
 EXPLORE = 3000000. # frames over which to anneal epsilon
 FINAL_EPSILON = 0.0001 # final value of epsilon
 INITIAL_EPSILON = 0.1 # starting value of epsilon
@@ -87,6 +87,7 @@ def trainNetwork(model,args):
         model.compile(loss='mse',optimizer=adam)
         print ("Weight load successfully")    
     else:                       #We go to training mode
+        OBSERVE = OBSERVATION
         epsilon = INITIAL_EPSILON
 
     t = 0

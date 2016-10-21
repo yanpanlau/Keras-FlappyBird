@@ -64,7 +64,7 @@ def trainNetwork(model,args):
     # store the previous observations in replay memory
     D = deque()
 
-    # get the first state by doing nothing and preprocess the image to 80x80x4
+    # get the first state by doing nothing and preprocess the image to 4x80x80
     do_nothing = np.zeros(ACTIONS)
     do_nothing[0] = 1
     x_t, r_0, terminal = game_state.frame_step(do_nothing)
@@ -133,7 +133,7 @@ def trainNetwork(model,args):
             #sample a minibatch to train on
             minibatch = random.sample(D, BATCH)
 
-            inputs = np.zeros((BATCH, s_t.shape[1], s_t.shape[2], s_t.shape[3]))   #32, 80, 80, 4
+            inputs = np.zeros((BATCH, s_t.shape[1], s_t.shape[2], s_t.shape[3]))   #32, 4, 80, 80
             targets = np.zeros((inputs.shape[0], ACTIONS))                         #32, 2
 
             #Now we do the experience replay

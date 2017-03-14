@@ -21,6 +21,7 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation, Flatten
 from keras.layers.convolutional import Convolution2D, MaxPooling2D
 from keras.optimizers import SGD , Adam
+import tensorflow as tf
 
 GAME = 'bird' # the name of the game being played for log files
 CONFIG = 'nothreshold'
@@ -33,6 +34,7 @@ INITIAL_EPSILON = 0.1 # starting value of epsilon
 REPLAY_MEMORY = 50000 # number of previous transitions to remember
 BATCH = 32 # size of minibatch
 FRAME_PER_ACTION = 1
+LEARNING_RATE = 1e-4
 
 img_rows , img_cols = 80, 80
 #Convert image into Black and white
@@ -41,18 +43,18 @@ img_channels = 4 #We stack 4 frames
 def buildmodel():
     print("Now we build the model")
     model = Sequential()
-    model.add(Convolution2D(32, 8, 8, subsample=(4,4),init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same',input_shape=(img_channels,img_rows,img_cols)))
+    model.add(Convolution2D(32, 8, 8, subsample=(4, 4), border_mode='same',input_shape=(img_rows,img_cols,img_channels)))  #80*80*4
     model.add(Activation('relu'))
-    model.add(Convolution2D(64, 4, 4, subsample=(2,2),init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same'))
+    model.add(Convolution2D(64, 4, 4, subsample=(2, 2), border_mode='same'))
     model.add(Activation('relu'))
-    model.add(Convolution2D(64, 3, 3, subsample=(1,1),init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same'))
+    model.add(Convolution2D(64, 3, 3, subsample=(1, 1), border_mode='same'))
     model.add(Activation('relu'))
     model.add(Flatten())
-    model.add(Dense(512, init=lambda shape, name: normal(shape, scale=0.01, name=name)))
+    model.add(Dense(512))
     model.add(Activation('relu'))
-    model.add(Dense(2,init=lambda shape, name: normal(shape, scale=0.01, name=name)))
+    model.add(Dense(2))
    
-    adam = Adam(lr=1e-6)
+    adam = Adam(lr=LEARNING_RATE)
     model.compile(loss='mse',optimizer=adam)
     print("We finish building the model")
     return model
@@ -73,17 +75,20 @@ def trainNetwork(model,args):
     x_t = skimage.transform.resize(x_t,(80,80))
     x_t = skimage.exposure.rescale_intensity(x_t,out_range=(0,255))
 
-    s_t = np.stack((x_t, x_t, x_t, x_t), axis=0)
+    s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
+    #print (s_t.shape)
 
     #In Keras, need to reshape
-    s_t = s_t.reshape(1, s_t.shape[0], s_t.shape[1], s_t.shape[2])
+    s_t = s_t.reshape(1, s_t.shape[0], s_t.shape[1], s_t.shape[2])  #1*80*80*4
+
+    
 
     if args['mode'] == 'Run':
         OBSERVE = 999999999    #We keep observe, never train
         epsilon = FINAL_EPSILON
         print ("Now we load weight")
         model.load_weights("model.h5")
-        adam = Adam(lr=1e-6)
+        adam = Adam(lr=LEARNING_RATE)
         model.compile(loss='mse',optimizer=adam)
         print ("Weight load successfully")    
     else:                       #We go to training mode
@@ -120,8 +125,8 @@ def trainNetwork(model,args):
         x_t1 = skimage.transform.resize(x_t1,(80,80))
         x_t1 = skimage.exposure.rescale_intensity(x_t1, out_range=(0, 255))
 
-        x_t1 = x_t1.reshape(1, 1, x_t1.shape[0], x_t1.shape[1])
-        s_t1 = np.append(x_t1, s_t[:, :3, :, :], axis=1)
+        x_t1 = x_t1.reshape(1, x_t1.shape[0], x_t1.shape[1], 1) #1x80x80x1
+        s_t1 = np.append(x_t1, s_t[:, :, :, :3], axis=3)
 
         # store the transition in D
         D.append((s_t, action_index, r_t, s_t1, terminal))
@@ -133,7 +138,10 @@ def trainNetwork(model,args):
             #sample a minibatch to train on
             minibatch = random.sample(D, BATCH)
 
+
+
             inputs = np.zeros((BATCH, s_t.shape[1], s_t.shape[2], s_t.shape[3]))   #32, 80, 80, 4
+            print (inputs.shape)
             targets = np.zeros((inputs.shape[0], ACTIONS))                         #32, 2
 
             #Now we do the experience replay
@@ -162,7 +170,7 @@ def trainNetwork(model,args):
         t = t + 1
 
         # save progress every 10000 iterations
-        if t % 100 == 0:
+        if t % 1000 == 0:
             print("Now we save model")
             model.save_weights("model.h5", overwrite=True)
             with open("model.json", "w") as outfile:
@@ -195,4 +203,9 @@ def main():
     playGame(args)
 
 if __name__ == "__main__":
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    sess = tf.Session(config=config)
+    from keras import backend as K
+    K.set_session(sess)
     main()

@@ -14,6 +14,7 @@ https://yanpanlau.github.io/2016/07/10/FlappyBird-Keras.html
 * Keras 1.0 
 * pygame
 * scikit-image
+* h5py
 
 # How to Run?
 

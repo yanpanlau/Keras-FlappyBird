@@ -14,8 +14,8 @@ import numpy as np
 from collections import deque
 
 import json
-from keras import initializations
-from keras.initializations import normal, identity
+from keras import initializers
+from keras.initializers import normal, identity
 from keras.models import model_from_json
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation, Flatten
@@ -53,7 +53,7 @@ def buildmodel():
     model.add(Dense(512))
     model.add(Activation('relu'))
     model.add(Dense(2))
-   
+
     adam = Adam(lr=LEARNING_RATE)
     model.compile(loss='mse',optimizer=adam)
     print("We finish building the model")
@@ -81,7 +81,7 @@ def trainNetwork(model,args):
     #In Keras, need to reshape
     s_t = s_t.reshape(1, s_t.shape[0], s_t.shape[1], s_t.shape[2])  #1*80*80*4
 
-    
+
 
     if args['mode'] == 'Run':
         OBSERVE = 999999999    #We keep observe, never train
@@ -90,7 +90,7 @@ def trainNetwork(model,args):
         model.load_weights("model.h5")
         adam = Adam(lr=LEARNING_RATE)
         model.compile(loss='mse',optimizer=adam)
-        print ("Weight load successfully")    
+        print ("Weight load successfully")
     else:                       #We go to training mode
         OBSERVE = OBSERVATION
         epsilon = INITIAL_EPSILON

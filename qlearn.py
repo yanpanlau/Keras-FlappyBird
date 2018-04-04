@@ -74,6 +74,8 @@ def trainNetwork(model,args):
     x_t = skimage.transform.resize(x_t,(80,80))
     x_t = skimage.exposure.rescale_intensity(x_t,out_range=(0,255))
 
+    x_t = x_t / 255.0
+
     s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
     #print (s_t.shape)
 
@@ -123,6 +125,10 @@ def trainNetwork(model,args):
         x_t1 = skimage.color.rgb2gray(x_t1_colored)
         x_t1 = skimage.transform.resize(x_t1,(80,80))
         x_t1 = skimage.exposure.rescale_intensity(x_t1, out_range=(0, 255))
+
+
+        x_t1 = x_t1 / 255.0
+
 
         x_t1 = x_t1.reshape(1, x_t1.shape[0], x_t1.shape[1], 1) #1x80x80x1
         s_t1 = np.append(x_t1, s_t[:, :, :, :3], axis=3)

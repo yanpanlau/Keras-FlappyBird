@@ -14,19 +14,23 @@ import numpy as np
 from collections import deque
 
 import json
+from keras.layers import Input, Embedding, LSTM, Dense
 from keras.initializers import normal, identity
 from keras.models import model_from_json
-from keras.models import Sequential
+from keras.models import Sequential, Model
 from keras.layers.core import Dense, Dropout, Activation, Flatten
-from keras.layers.convolutional import Convolution2D, MaxPooling2D
+from keras.layers.convolutional import Convolution2D, MaxPooling2D, Conv2D
 from keras.optimizers import SGD , Adam
 import tensorflow as tf
+
+from keras import backend as K
+from NoisyDense import NoisyDense
 
 GAME = 'bird' # the name of the game being played for log files
 CONFIG = 'nothreshold'
 ACTIONS = 2 # number of valid actions
 GAMMA = 0.99 # decay rate of past observations
-OBSERVATION = 3200. # timesteps to observe before training
+OBSERVATION = 320. # timesteps to observe before training
 EXPLORE = 3000000. # frames over which to anneal epsilon
 FINAL_EPSILON = 0.0001 # final value of epsilon
 INITIAL_EPSILON = 0.1 # starting value of epsilon
@@ -39,20 +43,36 @@ img_rows , img_cols = 80, 80
 #Convert image into Black and white
 img_channels = 4 #We stack 4 frames
 
+SIGMA_INIT = 0.02
+
 def buildmodel():
     print("Now we build the model")
-    model = Sequential()
-    model.add(Convolution2D(32, 8, 8, subsample=(4, 4), border_mode='same',input_shape=(img_rows,img_cols,img_channels)))  #80*80*4
-    model.add(Activation('relu'))
-    model.add(Convolution2D(64, 4, 4, subsample=(2, 2), border_mode='same'))
-    model.add(Activation('relu'))
-    model.add(Convolution2D(64, 3, 3, subsample=(1, 1), border_mode='same'))
-    model.add(Activation('relu'))
-    model.add(Flatten())
-    model.add(Dense(512))
-    model.add(Activation('relu'))
-    model.add(Dense(2))
-   
+    state_input = Input(shape=(img_rows, img_cols, img_channels))
+    x = Conv2D(32, (8,8), padding='same', activation='relu')(state_input)
+    x = MaxPooling2D(4,4)(x)
+    x = Conv2D(64, (4,4), padding='same', activation='relu')(x)
+    x = MaxPooling2D(2,2)(x)
+    x = Conv2D(64, (3,3), padding='same', activation='relu')(x)
+    x = Flatten()(x)
+    x = Dense(512, activation='relu')(x)
+    #output = Dense(2, activation='linear')(x)   
+    output = NoisyDense(2, activation='linear',name='out_actions', sigma_init=SIGMA_INIT)(x)
+    model = Model(input=state_input, output=output)
+
+    #model = Sequential()
+    #model.add(Convolution2D(32, 8, 8, subsample=(4, 4), border_mode='same',input_shape=(img_rows,img_cols,img_channels)))  #80*80*4
+    #model.add(Activation('relu'))
+    #model.add(Convolution2D(64, 4, 4, subsample=(2, 2), border_mode='same'))
+    #model.add(Activation('relu'))
+    #model.add(Convolution2D(64, 3, 3, subsample=(1, 1), border_mode='same'))
+    #model.add(Activation('relu'))
+    #model.add(Flatten())
+    #model.add(Dense(512))
+    #model.add(Activation('relu'))
+    #model.add(Dense(2))
+
+
+
     adam = Adam(lr=LEARNING_RATE)
     model.compile(loss='mse',optimizer=adam)
     print("We finish building the model")
@@ -73,9 +93,7 @@ def trainNetwork(model,args):
     x_t = skimage.color.rgb2gray(x_t)
     x_t = skimage.transform.resize(x_t,(80,80))
     x_t = skimage.exposure.rescale_intensity(x_t,out_range=(0,255))
-
     x_t = x_t / 255.0
-
     s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
     #print (s_t.shape)
 
@@ -104,16 +122,10 @@ def trainNetwork(model,args):
         r_t = 0
         a_t = np.zeros([ACTIONS])
         #choose an action epsilon greedy
-        if t % FRAME_PER_ACTION == 0:
-            if random.random() <= epsilon:
-                print("----------Random Action----------")
-                action_index = random.randrange(ACTIONS)
-                a_t[action_index] = 1
-            else:
-                q = model.predict(s_t)       #input a stack of 4 images, get the prediction
-                max_Q = np.argmax(q)
-                action_index = max_Q
-                a_t[max_Q] = 1
+        q = model.predict(s_t)       #input a stack of 4 images, get the prediction
+        max_Q = np.argmax(q)
+        action_index = max_Q
+        a_t[max_Q] = 1
 
         #We reduced the epsilon gradually
         if epsilon > FINAL_EPSILON and t > OBSERVE:
@@ -125,10 +137,7 @@ def trainNetwork(model,args):
         x_t1 = skimage.color.rgb2gray(x_t1_colored)
         x_t1 = skimage.transform.resize(x_t1,(80,80))
         x_t1 = skimage.exposure.rescale_intensity(x_t1, out_range=(0, 255))
-
-
-        x_t1 = x_t1 / 255.0
-
+        x_t1  = x_t1 / 255.0
 
         x_t1 = x_t1.reshape(1, x_t1.shape[0], x_t1.shape[1], 1) #1x80x80x1
         s_t1 = np.append(x_t1, s_t[:, :, :, :3], axis=3)
@@ -140,6 +149,7 @@ def trainNetwork(model,args):
 
         #only train if done observing
         if t > OBSERVE:
+            model.get_layer('out_actions').sample_noise()
             #sample a minibatch to train on
             minibatch = random.sample(D, BATCH)
 
@@ -174,7 +184,7 @@ def trainNetwork(model,args):
 
         print("TIMESTEP", t, "/ STATE", state, \
             "/ EPSILON", epsilon, "/ ACTION", action_index, "/ REWARD", r_t, \
-            "/ Q_MAX " , np.max(Q_sa), "/ Loss ", loss)
+            "/ Q_MAX " , np.max(Q_sa), "/ Loss ", loss, "/ Q", q)
 
     print("Episode finished!")
     print("************************")

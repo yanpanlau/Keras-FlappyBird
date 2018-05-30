@@ -1,8 +1,8 @@
-
 from keras import backend as K
 from keras.engine.topology import Layer
 from keras import activations, initializers, regularizers, constraints
 import numpy as np
+
 
 class NoisyDense(Layer):
 
@@ -61,6 +61,10 @@ class NoisyDense(Layer):
         else:
             self.bias = None
             self.epsilon_bias = None
+
+        self.epsilon_kernel = K.zeros(shape=(self.input_dim, self.units))
+        self.epsilon_bias = K.zeros(shape=(self.units,))
+
         self.sample_noise()
         super(NoisyDense, self).build(input_shape)
 
@@ -85,9 +89,9 @@ class NoisyDense(Layer):
         return tuple(output_shape)
 
     def sample_noise(self):
-        self.epsilon_kernel = K.random_normal(shape=(self.input_dim, self.units), mean=0, stddev=1)
-        self.epsilon_bias = K.random_normal(shape=(self.units,), mean=0, stddev=1)
+        K.set_value(self.epsilon_kernel, np.random.normal(0, 1, (self.input_dim, self.units)))
+        K.set_value(self.epsilon_bias, np.random.normal(0, 1, (self.units,)))
 
     def remove_noise(self):
-        self.epsilon_kernel = K.zeros(shape=(self.input_dim, self.units))
-        self.epsilon_bias = K.zeros(shape=(self.units))
+        K.set_value(self.epsilon_kernel, np.zeros(shape=(self.input_dim, self.units)))
+        K.set_value(self.epsilon_bias, np.zeros(shape=self.units,))
